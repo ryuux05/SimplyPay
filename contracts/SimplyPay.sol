@@ -5,8 +5,9 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract SimplyPay is EIP712("SimplyPay", "1") {
+contract SimplyPay is ReentrancyGuard , EIP712("SimplyPay", "1") {
     using SafeERC20 for IERC20;
 
     //Interface
@@ -17,6 +18,7 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
         address sender;
         uint256 amount;
         uint256 nonce;
+        uint256 expire;  
     }
 
     address public constant USDTAddress = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
@@ -25,7 +27,7 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
     mapping(address => uint256) public nonces;
 
     // Mapping for user funds
-    mapping(address => uint256) private balances;
+    mapping(address => uint256) public balances;
 
     // Mapping for merchants
     mapping(address => bool) private merchants;
@@ -35,7 +37,7 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
 
     //Typehash for EIP-721
     bytes32 public constant REQUEST_TYPEHASH = keccak256(
-        "PaymentRequest(address sender,uint256 amount,uint256 nonce)"
+        "PaymentRequest(address sender,uint256 amount,uint256 nonce,uint256 expire)"
     );
 
     //Events
@@ -64,6 +66,8 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
         PaymentRequest memory request,
         bytes memory signature
     ) external view returns (bool) {
+        // Ensure signature is not expired
+        require(block.timestamp <= request.expire, "Signature expired"); 
         // Ensure nonce is correct
         require(request.nonce == nonces[request.sender] + 1, "Invalid nonce");
 
@@ -73,7 +77,7 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
     function recoverAddressOfRequest(
         PaymentRequest memory request,
         bytes memory signature
-    ) public view returns (address) {
+    ) internal view returns (address) {
         bytes32 digest = keccak256(
             abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, keccak256(encodeRequest(request)))
         );
@@ -81,18 +85,19 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
         return ECDSA.recover(digest, signature);
     }
 
-    function encodeRequest(PaymentRequest memory request) public pure returns (bytes memory) {
+    function encodeRequest(PaymentRequest memory request) internal pure returns (bytes memory) {
         return (
             abi.encode(
                 REQUEST_TYPEHASH,
                 request.sender,
                 request.amount,
-                request.nonce
+                request.nonce,
+                request.expire
             )
         );
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) nonReentrant external {
         require(amount > 0, "Amount must be greater than zero");
 
         // Transfer USDT from user to this contract
@@ -105,8 +110,32 @@ contract SimplyPay is EIP712("SimplyPay", "1") {
         emit Deposit(msg.sender, amount);
     }
 
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) nonReentrant external {
+        require(amount > 0, "Amount must be greater than zero");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
 
+        // Update user's balance
+        balances[msg.sender] -= amount;
+
+        // Transfer USDT to the user
+        usdt.safeTransfer(msg.sender, amount);
+
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function transact( PaymentRequest memory request,
+        bytes memory signature) nonReentrant external
+    {
+        //Ensure signature is valid
+        require(this.verifySignature(request, signature), "Signature is invalid");
+
+        //Ensure user have enough funds
+        require(balances[msg.sender] >= request.amount, "Insufficient balance");
+
+        balances[msg.sender] -= request.amount;
+        balances[request.sender] += request.amount;
+
+        emit PaymentSucceess(msg.sender, request.sender);
     }
 
     function getUSDTBalance() external view returns (uint256){
