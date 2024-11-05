@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MetaMask signTypedData with ethers.js</title>
+</head>
+<body>
+  <button id="connectButton">Connect MetaMask</button>
+  <button id="signButton">Sign Typed Data</button>
+  <h1>Deposit to SimplyPay</h1>
+  <label for="amount">Amount to Deposit:</label>
+  <input type="text" id="amount" placeholder="Enter amount in ETH">
+  <button id="depositButton">Deposit</button>
+
+  <button id="withdraw">Withdraw</button>
+  <button id="Check">Check balance</button>
+  
+  <!-- Display the signature -->
+  <p id="signature"></p>
+  
+  <!-- Display messages -->
+  <p id="message"></p>
+  
+  <!-- Include ethers.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.js"></script>
+  <!-- Include your script -->
+  <script src="./script.js"></script>
+</body>
+</html>

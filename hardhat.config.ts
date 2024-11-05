@@ -39,11 +39,15 @@ const config: HardhatUserConfig = {
       },
     },
     'sepolia': {
-      url: process.env.RPC_URL_SEPOLIA || 'https://rpc.sepolia.org/',
+      url: process.env.ALCHEMY_SEPOLIA_API || 'https://rpc.sepolia.org/',
       accounts,
     },
     "arbitrum-sepolia": {
       url: process.env.ALCHEMY_ARBITRUM_SEPOLIA_API,
+      accounts,
+    },
+    "node":{
+      url: "http://127.0.0.1:8545/",
       accounts,
     }
   },

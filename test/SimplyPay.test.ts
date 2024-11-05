@@ -31,6 +31,7 @@ describe("SimplyPay", function() {
     let expireTime: number;
 
     async function getImpersonatedSigner(address: string): Promise<Signer> {
+
         await hre.ethers.provider.send('hardhat_impersonateAccount',[address]);
         
         await signer.sendTransaction({

@@ -34,7 +34,6 @@ import { task } from "hardhat/config";
 //Task
 task("deploy", "deploy contract with contract name as params")
 .addPositionalParam("contractName")
-.addOptionalPositionalParam("args")
 .setAction(async (taskArgs, hre) => {
     console.log(`Deploying ${taskArgs.contractName}...`);
 
